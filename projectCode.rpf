@@ -1,0 +1,832 @@
+OPEN DATA "C:\Users\judem\OneDrive\USF\Spring 2024\Time Series Analysis & Forecasting\Final Project\projectData.xlsx"
+CALENDAR(M) 2000:1
+DATA(FORMAT=XLSX,ORG=COLUMNS) 2000:01 2019:12 MEDCPI tradeBal unemp
+
+
+***Graphing Data***
+GRAPH(STYLE=LINE,HEADER="CPI Over Time") 1
+# MEDCPI
+GRAPH(STYLE=LINE,HEADER="Trade Balance Over Time") 1
+# TRADEBAL
+GRAPH(STYLE=LINE,HEADER="Unemployment Over Time") 1
+# UNEMP
+
+*All appear to be covariance stationary
+
+GRAPH(STYLE=LINE,OVERLAY=LINE,HEADER="All Variables",KEY=LOLEFT) 3
+# MEDCPI
+# UNEMP
+# TRADEBAL
+
+*Unemployment and Trade Balance appear to move together and CPI appear to move inverse to the others.
+
+@bjident MEDCPI
+@bjident TRADEBAL
+@bjident UNEMP
+
+*Autocorrelations and partials show stationarity for all variables.
+
+
+CROSS(FROM=-12,TO=12,RESULTS=CCCPITRADE) MEDCPI TRADEBAL
+
+Cross Correlations of Series MEDCPI and TRADEBAL
+Monthly Data From 2000:01 To 2019:12
+
+
+  -12      -11      -10       -9       -8       -7       -6       -5       -4       -3
+-0.01705 -0.03046 -0.06434 -0.07424 -0.10539 -0.10393 -0.12254 -0.14659 -0.18520 -0.21345
+   -2       -1       0        1        2        3        4        5        6        7
+-0.22050 -0.22666 -0.24098 -0.23765 -0.23499 -0.25478 -0.23060 -0.23784 -0.26542 -0.27680
+   8        9        10       11       12
+-0.24094 -0.21810 -0.21616 -0.19183 -0.17478
+
+CROSS(FROM=-12,TO=12,RESULTS=CCCPIUNEMP) MEDCPI UNEMP
+
+Cross Correlations of Series MEDCPI and UNEMP
+Monthly Data From 2000:01 To 2019:12
+
+
+  -12      -11      -10       -9       -8       -7       -6       -5       -4       -3
+-0.39525 -0.41932 -0.44276 -0.46682 -0.48697 -0.50834 -0.53040 -0.55401 -0.57445 -0.58559
+   -2       -1       0        1        2        3        4        5        6        7
+-0.59018 -0.60393 -0.60619 -0.60242 -0.60339 -0.59683 -0.59460 -0.57904 -0.56600 -0.54416
+   8        9        10       11       12
+-0.52395 -0.50520 -0.48390 -0.46183 -0.43679
+
+CROSS(FROM=-12,TO=12,RESULTS=CCTRADEUNEMP) TRADEBAL UNEMP
+
+Cross Correlations of Series TRADEBAL and UNEMP
+Monthly Data From 2000:01 To 2019:12
+
+
+  -12      -11      -10       -9       -8       -7       -6       -5       -4       -3
+0.072343 0.094734 0.113528 0.133212 0.151698 0.170421 0.185691 0.199351 0.212125 0.218409
+   -2       -1       0        1        2        3        4        5        6        7
+0.220915 0.220660 0.218729 0.219323 0.215680 0.211510 0.203552 0.196970 0.187893 0.176087
+   8        9        10       11       12
+0.167576 0.157501 0.148529 0.141211 0.130435
+
+GRAPH(STYLE=LINE,OVERLAY=LINE,HEADER="Cross Correlations",KEY=LOLEFT) 3
+# CCCPITRADE
+# CCTRADEUNEMP
+# CCCPIUNEMP
+
+*Cross Correlations are nonzero, ready for VAR
+
+*****Starting out with VAR*****
+@varlagselect(lags=8,crit=aic)
+# MEDCPI TRADEBAL UNEMP
+
+VAR Lag Selection
+Lags AICC
+   0 27.2029898
+   1 20.1956860
+   2 20.0787835
+   3 20.0196727
+   4 19.9965148
+   5 19.9660412
+   6 19.9380157
+   7 19.9343669*
+   8 19.9524568
+
+@varlagselect(lags=7, crit=sbc)
+# MEDCPI TRADEBAL UNEMP
+
+VAR Lag Selection
+Lags SBC/BIC
+   0 27.2543780
+   1 20.3711836
+   2 20.3631310*
+   3 20.4407538
+   4 20.5418732
+   5 20.6335273
+   6 20.7270327
+   7 20.8390295
+
+* Going with VAR(2) from SBC
+
+SYSTEM(MODEL=VAR2)
+VARIABLES MEDCPI TRADEBAL UNEMP
+LAGS 1 to 2
+DET CONSTANT
+END(SYSTEM)
+ESTIMATE
+
+VAR/System - Estimation by Least Squares
+Monthly Data From 2000:03 To 2019:12
+Usable Observations                       238
+
+Dependent Variable MEDCPI
+Mean of Dependent Variable       2.4121778936
+Std Error of Dependent Variable  0.8328618905
+Standard Error of Estimate       0.6206079671
+Sum of Squared Residuals         88.970631488
+Durbin-Watson Statistic                2.0135
+
+    Variable                        Coeff      Std Error      T-Stat      Signif
+************************************************************************************
+1.  MEDCPI{1}                     0.278063226  0.065668128      4.23437  0.00003310
+2.  MEDCPI{2}                     0.127879459  0.064887835      1.97078  0.04994347
+3.  TRADEBAL{1}                  -0.000006894  0.000012420     -0.55505  0.57939660
+4.  TRADEBAL{2}                   0.000001504  0.000012296      0.12228  0.90278361
+5.  UNEMP{1}                      0.071360401  0.256730854      0.27796  0.78129320
+6.  UNEMP{2}                     -0.232442308  0.258110338     -0.90055  0.36876338
+7.  Constant                      2.142104542  0.371281893      5.76948  0.00000003
+
+    F-Tests, Dependent Variable MEDCPI
+              Variable           F-Statistic     Signif
+    *******************************************************
+    MEDCPI                            15.3888    0.0000005
+    TRADEBAL                           0.8727    0.4191977
+    UNEMP                             13.9041    0.0000020
+
+
+Dependent Variable TRADEBAL
+Mean of Dependent Variable       -44699.84034
+Std Error of Dependent Variable   10106.90674
+Standard Error of Estimate         3205.07901
+Sum of Squared Residuals         2372954762.9
+Durbin-Watson Statistic                2.1151
+
+    Variable                        Coeff      Std Error      T-Stat      Signif
+************************************************************************************
+1.  MEDCPI{1}                        2.572408   339.137666      0.00759  0.99395454
+2.  MEDCPI{2}                       73.113343   335.107910      0.21818  0.82748265
+3.  TRADEBAL{1}                      0.648503     0.064141     10.11065  0.00000000
+4.  TRADEBAL{2}                      0.300150     0.063499      4.72682  0.00000397
+5.  UNEMP{1}                      3632.946793  1325.865466      2.74006  0.00662270
+6.  UNEMP{2}                     -3562.715382  1332.989698     -2.67273  0.00806015
+7.  Constant                     -2958.284940  1917.454924     -1.54282  0.12424360
+
+    F-Tests, Dependent Variable TRADEBAL
+              Variable           F-Statistic     Signif
+    *******************************************************
+    MEDCPI                             0.0274    0.9729583
+    TRADEBAL                         960.1282    0.0000000
+    UNEMP                              3.8358    0.0229714
+
+
+Dependent Variable UNEMP
+Mean of Dependent Variable       5.8966386555
+Std Error of Dependent Variable  1.8092557517
+Standard Error of Estimate       0.1570070258
+Sum of Squared Residuals         5.6944286198
+Durbin-Watson Statistic                2.1005
+
+    Variable                        Coeff      Std Error      T-Stat      Signif
+************************************************************************************
+1.  MEDCPI{1}                    -0.012429760  0.016613318     -0.74818  0.45511233
+2.  MEDCPI{2}                     0.022871407  0.016415912      1.39325  0.16488455
+3.  TRADEBAL{1}                   0.000004376  0.000003142      1.39264  0.16506901
+4.  TRADEBAL{2}                  -0.000004400  0.000003111     -1.41437  0.15860116
+5.  UNEMP{1}                      1.187831269  0.064950097     18.28837  0.00000000
+6.  UNEMP{2}                     -0.188497963  0.065299092     -2.88669  0.00426235
+7.  Constant                     -0.023951140  0.093930257     -0.25499  0.79895881
+
+    F-Tests, Dependent Variable UNEMP
+              Variable           F-Statistic     Signif
+    *******************************************************
+    MEDCPI                             1.0161    0.3636250
+    TRADEBAL                           1.0161    0.3636030
+    UNEMP                           8458.4070    0.0000000
+
+*** CPI exhibits no significant predictive causality
+*** TRADEBAL exhibits no significant predictive causality
+*** UNEMP exhibits predictively causality on CPI and Trade Balance (up to 2% significance for Trade Balance).
+
+**We can see from the F-tests that UNEMP Exhibits Granger Causality on CPI and TRADEBAL (up to 2% significance for Trade Balance).
+
+
+***Now we'll run the truncated model for forecasting
+SYSTEM(MODEL=VARTRUNC)
+VARIABLES MEDCPI TRADEBAL UNEMP
+LAGS 1 TO 2
+DET Constant
+END(SYSTEM)
+ESTIMATE * 2018:12
+
+VAR/System - Estimation by Least Squares
+Monthly Data From 2000:03 To 2018:12
+Usable Observations                       226
+
+Dependent Variable MEDCPI
+Mean of Dependent Variable       2.3887793006
+Std Error of Dependent Variable  0.8461254526
+Standard Error of Estimate       0.6326714165
+Sum of Squared Residuals         87.659813550
+Durbin-Watson Statistic                2.0149
+
+    Variable                        Coeff      Std Error      T-Stat      Signif
+************************************************************************************
+1.  MEDCPI{1}                     0.276861876  0.067365211      4.10986  0.00005597
+2.  MEDCPI{2}                     0.132388069  0.066793293      1.98206  0.04872331
+3.  TRADEBAL{1}                  -0.000007739  0.000012982     -0.59616  0.55168094
+4.  TRADEBAL{2}                   0.000002365  0.000012839      0.18422  0.85401456
+5.  UNEMP{1}                      0.071216420  0.264824380      0.26892  0.78824486
+6.  UNEMP{2}                     -0.236062025  0.265914901     -0.88774  0.37565711
+7.  Constant                      2.163854208  0.385556463      5.61229  0.00000006
+
+    F-Tests, Dependent Variable MEDCPI
+              Variable           F-Statistic     Signif
+    *******************************************************
+    MEDCPI                            14.8105    0.0000009
+    TRADEBAL                           0.8478    0.4297367
+    UNEMP                             13.1327    0.0000041
+
+
+Dependent Variable TRADEBAL
+Mean of Dependent Variable       -44598.08850
+Std Error of Dependent Variable   10334.11179
+Standard Error of Estimate         3221.16883
+Sum of Squared Residuals         2272328368.8
+Durbin-Watson Statistic                2.1203
+
+    Variable                        Coeff      Std Error      T-Stat      Signif
+************************************************************************************
+1.  MEDCPI{1}                       97.655636   342.981699      0.28473  0.77612351
+2.  MEDCPI{2}                       55.900082   340.069852      0.16438  0.86958501
+3.  TRADEBAL{1}                      0.643516     0.066095      9.73618  0.00000000
+4.  TRADEBAL{2}                      0.308079     0.065368      4.71300  0.00000434
+5.  UNEMP{1}                      3657.063192  1348.320810      2.71231  0.00721237
+6.  UNEMP{2}                     -3517.752876  1353.873067     -2.59829  0.01000497
+7.  Constant                     -3497.799977  1963.013385     -1.78185  0.07615894
+
+    F-Tests, Dependent Variable TRADEBAL
+              Variable           F-Statistic     Signif
+    *******************************************************
+    MEDCPI                             0.0786    0.9244379
+    TRADEBAL                         950.0171    0.0000000
+    UNEMP                              3.9785    0.0200814
+
+
+Dependent Variable UNEMP
+Mean of Dependent Variable       6.0146017699
+Std Error of Dependent Variable  1.7804142017
+Standard Error of Estimate       0.1593380220
+Sum of Squared Residuals         5.5601045514
+Durbin-Watson Statistic                2.1065
+
+    Variable                        Coeff      Std Error      T-Stat      Signif
+************************************************************************************
+1.  MEDCPI{1}                    -0.012090587  0.016965899     -0.71264  0.47682682
+2.  MEDCPI{2}                     0.022605266  0.016821862      1.34380  0.18040273
+3.  TRADEBAL{1}                   0.000004860  0.000003269      1.48646  0.13859663
+4.  TRADEBAL{2}                  -0.000004924  0.000003233     -1.52284  0.12924029
+5.  UNEMP{1}                      1.190567525  0.066695905     17.85068  0.00000000
+6.  UNEMP{2}                     -0.192315234  0.066970553     -2.87164  0.00448444
+7.  Constant                     -0.017694956  0.097102228     -0.18223  0.85557066
+
+    F-Tests, Dependent Variable UNEMP
+              Variable           F-Statistic     Signif
+    *******************************************************
+    MEDCPI                             0.9415    0.3916140
+    TRADEBAL                           1.1701    0.3122751
+    UNEMP                           7650.3590    0.0000000
+
+***Forecast***
+FORECAST(MODEL=VARTRUNC,FROM=2019:01,TO=2019:12,RESULT=VARFORE,STDERRS=VARFORESTF,PRINT)
+
+ Entry     MEDCPI     TRADEBAL      UNEMP
+ 2019:01 3.041924022 -53507.7939 3.928634590
+ 2019:02 2.945105281 -52827.9912 3.972064713
+ 2019:03 3.174823254 -53597.7906 4.020358027
+ 2019:04 3.038256943 -52774.4091 4.061319483
+ 2019:05 3.021291498 -52442.2396 4.115666783
+ 2019:06 3.032410159 -52473.7354 4.158262130
+ 2019:07 3.019039001 -51930.4684 4.208709366
+ 2019:08 2.996329353 -51649.0362 4.258056728
+ 2019:09 2.988646968 -51472.0275 4.304806745
+ 2019:10 2.968223844 -51100.4413 4.352983830
+ 2019:11 2.954123927 -50841.2369 4.400106484
+ 2019:12 2.940824854 -50614.1241 4.445594900
+
+**I'll analyze MSE at the end, now ARIMA Model
+
+***Determine p and q***
+@bjautofit(pmax=5, qmax=5, crit=SBC) MEDCPI
+
+BIC analysis of models for series MEDCPI
+   MA
+AR    0        1         2        3        4        5
+ 0 1132.1346 920.5765  798.7315 753.5329 704.4559 665.6661
+ 1  552.5939 477.1906* 481.9775 487.1401 490.6743 495.6802
+ 2  515.1586 482.0526  487.3669 490.0220 497.4766 594.0109
+ 3  501.9707 487.0245  492.1068 486.2540 499.0171 574.1701
+ 4  494.5192 491.8069  497.2740 500.2554 505.7343 500.3855
+ 5  497.1114 497.2874  501.5162 509.8201 499.5253 524.3008
+
+@bjautofit(pmax=5, qmax=5, crit=SBC) TRADEBAL
+
+BIC analysis of models for series TRADEBAL
+   MA
+AR    0          1         2         3         4         5
+ 0 5831.4861  5526.6790 5305.2768 5164.1005 5052.8266 4980.8258
+ 1 4592.5841  4575.3041 4578.7616 4573.3725 4576.9364 4581.5113
+ 2 4577.1360  4580.2032 4580.8787 4589.4866 4582.0325 4586.9185
+ 3 4576.3762  4588.4311 4576.1435 4580.9696 4586.5488 4588.9935
+ 4 4569.3148* 4574.7933 4580.1613 4585.6095 4591.7459 4592.2023
+ 5 4574.7937  4579.0854 4585.6335 4589.2262 4592.8733 4598.9794
+
+@bjautofit(pmax=5, qmax=5, crit=SBC) UNEMP
+
+BIC analysis of models for series UNEMP
+   MA
+AR    0         1         2          3         4         5
+ 0 1553.1606 1233.5630  980.7076   749.3189  634.0846  589.0230
+ 1 -188.2031 -189.3139 -198.1647  -195.1739 -192.1084 -199.0240
+ 2 -192.8547 -179.1439 -221.9633* -189.8473 -215.4989 -214.3322
+ 3 -206.4031 -178.4760 -220.5866  -212.5783  653.7942 -208.9461
+ 4 -208.0399  480.8181 -212.2900  -210.8009 -213.9586  181.6521
+ 5 -206.7932  492.6391 -193.7205   188.2497 -208.9668 -207.2108
+
+***Best ARMA(p,q) Models by SBC:
+**MEDCPI -> ARMA(1,1)
+**TRADEBAL -> ARMA(4,0)
+**UNEMP -> ARMA(2,2)
+
+***Unit Root Test***
+@DFUNIT(LAGS=2) MEDCPI
+
+Dickey-Fuller Unit Root Test, Series MEDCPI
+Regression Run From 2000:04 to 2019:12
+Observations        238
+With intercept
+Using fixed lags 2
+Null is unit root. Reject in left tail.
+
+Sig Level    Crit Value
+1%(**)       -3.45922
+5%(*)        -2.87375
+10%          -2.57322
+
+T-Statistic  -4.20522**
+
+@DFUNIT(LAGS=5) TRADEBAL
+
+Dickey-Fuller Unit Root Test, Series TRADEBAL
+Regression Run From 2000:07 to 2019:12
+Observations        235
+With intercept
+Using fixed lags 5
+Null is unit root. Reject in left tail.
+
+Sig Level    Crit Value
+1%(**)         -3.45956
+5%(*)          -2.87390
+10%            -2.57330
+
+T-Statistic    -2.44062
+
+@DFUNIT(LAGS=3) UNEMP
+
+Dickey-Fuller Unit Root Test, Series UNEMP
+Regression Run From 2000:05 to 2019:12
+Observations        237
+With intercept
+Using fixed lags 3
+Null is unit root. Reject in left tail.
+
+Sig Level    Crit Value
+1%(**)         -3.45933
+5%(*)          -2.87380
+10%            -2.57325
+
+T-Statistic    -1.35640
+
+**Fail to reject null hypothesis of a unit root in Trade Balance and Unemployment
+
+**Check if Trade Balance and Unemployment need differencing
+BOXJENK(CONST,AR=4) TRADEBAL
+
+Box-Jenkins - Estimation by LS Gauss-Newton
+Convergence in     4 Iterations. Final criterion was  0.0000018 <=  0.0000100
+
+Dependent Variable TRADEBAL
+Monthly Data From 2000:05 To 2019:12
+Usable Observations                       236
+Degrees of Freedom                        231
+Centered R^2                        0.9050521
+R-Bar^2                             0.9034080
+Uncentered R^2                      0.9954726
+Mean of Dependent Variable       -44827.99576
+Std Error of Dependent Variable   10052.26372
+Standard Error of Estimate         3124.16817
+Sum of Squared Residuals         2254658585.9
+Regression F(4,231)                  550.4786
+Significance Level of F             0.0000000
+Log Likelihood                     -2231.4165
+Durbin-Watson Statistic                1.9977
+Q(36-4)                               38.5525
+Significance Level of Q             0.1973463
+
+    Variable                        Coeff      Std Error      T-Stat      Signif
+************************************************************************************
+1.  CONSTANT                     -46007.13883   4184.16829    -10.99553  0.00000000
+2.  AR{1}                             0.67651      0.06399     10.57200  0.00000000
+3.  AR{2}                             0.21019      0.07579      2.77352  0.00599845
+4.  AR{3}                             0.30383      0.07572      4.01236  0.00008123
+5.  AR{4}                            -0.23959      0.06384     -3.75303  0.00022105
+
+@regcrits
+
+Information Criteria
+AIC          18.961
+SBC          19.049
+Hannan-Quinn 18.997
+(log) FPE    18.961
+
+BOXJENK(DIFFS=1,CONST,AR=4) TRADEBAL
+
+Box-Jenkins - Estimation by LS Gauss-Newton
+Convergence in     3 Iterations. Final criterion was  0.0000000 <=  0.0000100
+
+Dependent Variable TRADEBAL, differenced 1 times
+Monthly Data From 2000:06 To 2019:12
+Usable Observations                       235
+Degrees of Freedom                        230
+Centered R^2                        0.9017220
+R-Bar^2                             0.9000128
+Uncentered R^2                      0.9953545
+Mean of Dependent Variable       -44894.64681
+Std Error of Dependent Variable   10021.32513
+Standard Error of Estimate         3168.81845
+Sum of Squared Residuals         2309524388.9
+Regression F(4,230)                  527.5749
+Significance Level of F             0.0000000
+Log Likelihood                     -2225.2854
+Durbin-Watson Statistic                1.9884
+Q(36-4)                               38.6979
+Significance Level of Q             0.1929278
+
+    Variable                        Coeff      Std Error      T-Stat      Signif
+************************************************************************************
+1.  CONSTANT                      -57.6359658  177.2333813     -0.32520  0.74532674
+2.  AR{1}                          -0.3033562    0.0662863     -4.57645  0.00000774
+3.  AR{2}                          -0.0849381    0.0675380     -1.25763  0.20979925
+4.  AR{3}                           0.2265413    0.0678322      3.33973  0.00097828
+5.  AR{4}                          -0.0046728    0.0668533     -0.06990  0.94433739
+
+@regcrits
+
+Information Criteria
+AIC          18.990
+SBC          19.078
+Hannan-Quinn 19.025
+(log) FPE    18.990
+
+BOXJENK(CONST,AR=2,MA=2) UNEMP
+
+Box-Jenkins - Estimation by LS Gauss-Newton
+Convergence in    11 Iterations. Final criterion was  0.0000090 <=  0.0000100
+
+Dependent Variable UNEMP
+Monthly Data From 2000:03 To 2019:12
+Usable Observations                       238
+Degrees of Freedom                        233
+Centered R^2                        0.9937480
+R-Bar^2                             0.9936407
+Uncentered R^2                      0.9994641
+Mean of Dependent Variable       5.8966386555
+Std Error of Dependent Variable  1.8092557517
+Standard Error of Estimate       0.1442799758
+Sum of Squared Residuals         4.8502937626
+Log Likelihood                       125.5872
+Durbin-Watson Statistic                1.9829
+Q(36-4)                               56.3162
+Significance Level of Q             0.0050149
+
+    Variable                        Coeff      Std Error      T-Stat      Signif
+************************************************************************************
+1.  CONSTANT                      5.832549555  0.740684013      7.87454  0.00000000
+2.  AR{1}                         1.948635263  0.030053046     64.83986  0.00000000
+3.  AR{2}                        -0.951260647  0.029880665    -31.83532  0.00000000
+4.  MA{1}                        -0.940959810  0.070292360    -13.38637  0.00000000
+5.  MA{2}                         0.146279262  0.066887898      2.18693  0.02974249
+
+@regcrits
+
+Information Criteria
+AIC          -1.005
+SBC          -0.917
+Hannan-Quinn -0.970
+(log) FPE    -1.005
+
+BOXJENK(DIFFS=1,CONST,AR=2,MA=2) UNEMP
+
+Box-Jenkins - Estimation by LS Gauss-Newton
+Convergence in    27 Iterations. Final criterion was  0.0000020 <=  0.0000100
+
+Dependent Variable UNEMP, differenced 1 times
+Monthly Data From 2000:04 To 2019:12
+Usable Observations                       237
+Degrees of Freedom                        232
+Centered R^2                        0.9936328
+R-Bar^2                             0.9935231
+Uncentered R^2                      0.9994558
+Mean of Dependent Variable       5.9046413502
+Std Error of Dependent Variable  1.8088587264
+Standard Error of Estimate       0.1455760337
+Sum of Squared Residuals         4.9166325306
+Log Likelihood                       122.9508
+Durbin-Watson Statistic                1.9929
+Q(36-4)                               58.8880
+Significance Level of Q             0.0026050
+
+    Variable                        Coeff      Std Error      T-Stat      Signif
+************************************************************************************
+1.  CONSTANT                      0.001211896  0.034029512      0.03561  0.97162150
+2.  AR{1}                         0.798636871  0.350014737      2.28172  0.02341243
+3.  AR{2}                         0.123616144  0.337302466      0.36648  0.71433754
+4.  MA{1}                        -0.769028133  0.352632265     -2.18082  0.03020173
+5.  MA{2}                         0.045942442  0.298505055      0.15391  0.87781574
+
+@regcrits
+
+Information Criteria
+AIC          -0.987
+SBC          -0.899
+Hannan-Quinn -0.952
+(log) FPE    -0.987
+
+**By both AIC and SBC, the ARMA models are better fits for both variables
+
+***ARMA/ARIMA Models***
+*CPI -> ARMA(1,1)
+*Trade Balance -> ARMA(4,0)
+*Unemployment -> ARMA(2,2)
+
+*****Time to run the Models*****
+*CPI
+BOXJENK(CONST,AR=1,MA=1,DEFINE=CPIARIMA) MEDCPI * 2018:12 CPIARIMARESIDS
+
+Box-Jenkins - Estimation by LS Gauss-Newton
+Convergence in     8 Iterations. Final criterion was  0.0000029 <=  0.0000100
+
+Dependent Variable MEDCPI
+Monthly Data From 2000:02 To 2018:12
+Usable Observations                       227
+Degrees of Freedom                        224
+Centered R^2                        0.4235969
+R-Bar^2                             0.4184504
+Uncentered R^2                      0.9362755
+Mean of Dependent Variable       2.3905273386
+Std Error of Dependent Variable  0.8446621140
+Standard Error of Estimate       0.6441342377
+Sum of Squared Residuals         92.939597218
+Log Likelihood                      -220.7435
+Durbin-Watson Statistic                1.9318
+Q(36-2)                               47.5901
+Significance Level of Q             0.0608983
+
+    Variable                        Coeff      Std Error      T-Stat      Signif
+************************************************************************************
+1.  CONSTANT                      2.346913254  0.237028676      9.90139  0.00000000
+2.  AR{1}                         0.935031402  0.029773606     31.40471  0.00000000
+3.  MA{1}                        -0.643773794  0.066726713     -9.64792  0.00000000
+
+*Trade Balance
+BOXJENK(CONST,AR=4,DEFINE=TRADEBALARIMA) TRADEBAL * 2018:12 TRADEBALARIMARESIDS
+
+Box-Jenkins - Estimation by LS Gauss-Newton
+Convergence in     4 Iterations. Final criterion was  0.0000003 <=  0.0000100
+
+Dependent Variable TRADEBAL
+Monthly Data From 2000:05 To 2018:12
+Usable Observations                       224
+Degrees of Freedom                        219
+Centered R^2                        0.9090278
+R-Bar^2                             0.9073662
+Uncentered R^2                      0.9954549
+Mean of Dependent Variable       -44732.20089
+Std Error of Dependent Variable   10281.12382
+Standard Error of Estimate         3129.14292
+Sum of Squared Residuals         2144346255.2
+Regression F(4,219)                  547.0820
+Significance Level of F             0.0000000
+Log Likelihood                     -2118.1811
+Durbin-Watson Statistic                1.9981
+Q(36-4)                               39.8788
+Significance Level of Q             0.1596666
+
+    Variable                        Coeff      Std Error      T-Stat      Signif
+************************************************************************************
+1.  CONSTANT                     -47288.01004   4773.82218     -9.90569  0.00000000
+2.  AR{1}                             0.67706      0.06566     10.31232  0.00000000
+3.  AR{2}                             0.21387      0.07736      2.76465  0.00618408
+4.  AR{3}                             0.31934      0.07749      4.12101  0.00005351
+5.  AR{4}                            -0.25581      0.06540     -3.91145  0.00012241
+
+*Unemployment
+BOXJENK(CONST,AR=2,MA=2,DEFINE=UNEMPARIMA) UNEMP * 2018:12 UNEMPARIMARESIDS
+
+Box-Jenkins - Estimation by LS Gauss-Newton
+Convergence in    10 Iterations. Final criterion was  0.0000073 <=  0.0000100
+
+Dependent Variable UNEMP
+Monthly Data From 2000:03 To 2018:12
+Usable Observations                       226
+Degrees of Freedom                        221
+Centered R^2                        0.9933917
+R-Bar^2                             0.9932721
+Uncentered R^2                      0.9994698
+Mean of Dependent Variable       6.0146017699
+Std Error of Dependent Variable  1.7804142017
+Standard Error of Estimate       0.1460366997
+Sum of Squared Residuals         4.7132046021
+Log Likelihood                       116.6488
+Durbin-Watson Statistic                1.9815
+Q(36-4)                               54.2568
+Significance Level of Q             0.0083137
+
+    Variable                        Coeff      Std Error      T-Stat      Signif
+************************************************************************************
+1.  CONSTANT                      5.999809679  0.690949567      8.68343  0.00000000
+2.  AR{1}                         1.948499883  0.030278462     64.35267  0.00000000
+3.  AR{2}                        -0.951444750  0.030056811    -31.65488  0.00000000
+4.  MA{1}                        -0.942680319  0.071989822    -13.09463  0.00000000
+5.  MA{2}                         0.149624460  0.068721605      2.17726  0.03052049
+
+**Now Forecasts
+UFORECAST(FROM=2019:01,TO=2019:12,EQUATION=CPIARIMA,STDERRS=CPIARIMASTD,PRINT) CPIARIMAFORE
+
+ Entry     MEDCPI
+ 2019:01 2.811150164
+ 2019:02 2.780989343
+ 2019:03 2.752788028
+ 2019:04 2.726418913
+ 2019:05 2.701762963
+ 2019:06 2.678708875
+ 2019:07 2.657152578
+ 2019:08 2.636996764
+ 2019:09 2.618150446
+ 2019:10 2.600528546
+ 2019:11 2.584051516
+ 2019:12 2.568644975
+
+UFORECAST(FROM=2019:01,TO=2019:12,EQUATION=TRADEBALARIMA,STDERRS=TRADEBALARIMASTD,PRINT) TRADEBALARIMAFORE
+
+ Entry    TRADEBAL
+ 2019:01 -53916.5177
+ 2019:02 -52824.0862
+ 2019:03 -54443.7866
+ 2019:04 -53406.5773
+ 2019:05 -53033.2695
+ 2019:06 -53355.3786
+ 2019:07 -52748.0721
+ 2019:08 -52551.8954
+ 2019:09 -52487.5464
+ 2019:10 -52125.6881
+ 2019:11 -51959.6349
+ 2019:12 -51799.4522
+
+UFORECAST(FROM=2019:01,TO=2019:12,EQUATION=UNEMPARIMA,STDERRS=UNEMPARIMASTD,PRINT) UNEMPARIMAFORE
+
+ Entry      UNEMP
+ 2019:01 3.921101915
+ 2019:02 3.960242801
+ 2019:03 4.003489444
+ 2019:04 4.050515133
+ 2019:05 4.100997890
+ 2019:06 4.154621192
+ 2019:07 4.211074636
+ 2019:08 4.270054555
+ 2019:09 4.331264588
+ 2019:10 4.394416195
+ 2019:11 4.459229130
+ 2019:12 4.525431862
+
+*****Forecast comparisons*****
+**Here are the forecasts**
+*VARFORE
+*CPIARIMAFORE
+*TRADEBALARIMAFORE
+*UNEMPARIMAFORE
+
+**Graphing Forecast vs Actual
+*CPI
+SET ACTCPI 2019:01 2019:12 = MEDCPI
+GRAPH(STYLE=LINE,HEADER="CPI Forcast vs Actual Values",KEY=LOLEFT) 3
+# VARFORE(1)
+# CPIARIMAFORE
+# ACTCPI
+
+*TRADEBAL
+SET ACTTRADEBAL 2019:01 2019:12 = TRADEBAL
+GRAPH(STYLE=LINE,HEADER="Trade Balance Forcast vs Actual Values",KEY=LOLEFT) 3
+# VARFORE(2)
+# TRADEBALARIMAFORE
+# ACTTRADEBAL
+
+*UNEMP
+SET ACTUNEMP 2019:01 2019:12 = UNEMP
+GRAPH(STYLE=LINE,HEADER="Unemployment Forcast vs Actual Values",KEY=LOLEFT) 3
+# VARFORE(3)
+# UNEMPARIMAFORE
+# ACTUNEMP
+
+**MSE Values for forecasted CPI values
+*VAR Model
+@uforeerrors VARFORE(1) MEDCPI
+
+Forecast Analysis for VARFORE(1)
+From 2019:01 to 2019:12
+Mean Error                 0.15723186
+Mean Absolute Error        0.25291757
+Root Mean Square Error     0.29704817
+Mean Square Error            0.088238
+Theil's U                    3.424783
+
+Mean Pct Error               0.052482
+Mean Abs Pct Error           0.084518
+Root Mean Square Pct Error   0.099435
+Theil's Relative U           3.537379
+
+*ARMA(1,1) Model
+@uforeerrors CPIARIMAFORE MEDCPI
+
+Forecast Analysis for CPIARIMAFORE
+From 2019:01 to 2019:12
+Mean Error                 -0.1764061
+Mean Absolute Error         0.2283134
+Root Mean Square Error      0.3113424
+Mean Square Error            0.096934
+Theil's U                   13.817013
+
+Mean Pct Error              -0.065962
+Mean Abs Pct Error           0.085553
+Root Mean Square Pct Error   0.117550
+Theil's Relative U          14.634395
+
+**MSE Values for forecasted Trade Balance values
+*VAR Model
+@uforeerrors VARFORE(2) TRADEBAL
+
+Forecast Analysis for VARFORE(2)
+From 2019:01 to 2019:12
+Mean Error                  -5486.4412
+Mean Absolute Error          5486.4412
+Root Mean Square Error       6113.6436
+Mean Square Error      37376637.903928
+Theil's U                    12.807379
+
+*ARMA(4,0) Model:
+@uforeerrors TRADEBALARIMAFORE TRADEBAL
+
+Forecast Analysis for TRADEBALARIMAFOR
+From 2019:01 to 2019:12
+Mean Error                  -6271.4921
+Mean Absolute Error          6271.4921
+Root Mean Square Error       6890.5385
+Mean Square Error      47479520.815101
+Theil's U                     9.545972
+
+**MSE Values for forecasted Unemployment values
+*VAR Model
+@uforeerrors VARFORE(3) UNEMP
+
+Forecast Analysis for VARFORE(3)
+From 2019:01 to 2019:12
+Mean Error                 0.51054698
+Mean Absolute Error        0.52244122
+Root Mean Square Error     0.58116988
+Mean Square Error            0.337758
+Theil's U                   12.329425
+
+Mean Pct Error               0.119656
+Mean Abs Pct Error           0.122684
+Root Mean Square Pct Error   0.135235
+Theil's Relative U          12.585189
+
+*ARMA(2,2)
+@uforeerrors UNEMPARIMAFORE UNEMP
+
+Forecast Analysis for UNEMPARIMAFORE
+From 2019:01 to 2019:12
+Mean Error                 0.52353661
+Mean Absolute Error        0.53668629
+Root Mean Square Error     0.60427244
+Mean Square Error            0.365145
+Theil's U                   10.865552
+
+Mean Pct Error               0.121794
+Mean Abs Pct Error           0.125148
+Root Mean Square Pct Error   0.139246
+Theil's Relative U          11.153643
+
+***MSE VALUES***
+*------------------------------------------------------------------
+*|   MODEL\Variable   |    CPI    |     TRADEBAL     |   UNEMP    |
+*------------------------------------------------------------------
+*|        VAR         | 0.088238* | 37376637.903928* |  0.337758* |
+*------------------------------------------------------------------
+*|     ARMA/ARIMA     | 0.096934  | 47479520.815101  |  0.365145  |
+*------------------------------------------------------------------
+
+*For all variables, VAR had the smaller MSE
+
+*Based on the graphs and the MSE's of each model, the VAR model was better for CPI and TRADEBAL
+*The VAR model is slightly better than ARMA by MSE, but only by about 0.03, and the graph show they appear very similar
+
+*The VAR model most likely predicted CPI and TRADEBAL better because UNEMP exhibits Granger causality on CPI and TRADEBAL,
+*This means that including UNEMP in the model improved the forecast for CPI and TRADEBAL (Compared to CPI or TRADEBAL alone in the ARMA models)
+*UNEMP's small difference in MSE between VAR and ARMA is likely due to the lack of a predictive causality-exhibiting variable for UNEMP in the data
